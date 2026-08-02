@@ -204,47 +204,52 @@
 
   #print-report{display:none;}
   @media print{
-    @page{size:A4;margin:9mm;}
+    @page{size:A4;margin:6mm;}
     body{background:#fff !important;}
     .wrap{display:none !important;}
     #print-report{
       display:block !important;color:#111;font-family:'Inter',system-ui,sans-serif;
-      max-width:100%;padding:0;
+      max-width:100%;padding:0;line-height:1.25;
     }
     #print-report .print-head{
       display:flex;align-items:center;justify-content:space-between;
-      border-bottom:2px solid #01619E;padding-bottom:8px;margin-bottom:10px;
+      border-bottom:1.5px solid #01619E;padding-bottom:5px;margin-bottom:6px;
     }
-    #print-report .print-logo{height:26px;}
-    #print-report h1{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0;color:#01619E;}
-    #print-report .print-meta{font-size:10.5px;color:#555;margin:0;text-align:right;}
+    #print-report .print-logo{height:20px;}
+    #print-report h1{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0;color:#01619E;}
+    #print-report .print-meta{font-size:9px;color:#555;margin:0;text-align:right;}
 
     #print-report .box-grid{
-      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;
+      display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;
     }
     #print-report .pbox{
-      border:1px solid #C9D6E0;border-radius:6px;padding:8px 10px;break-inside:avoid;
+      border:1px solid #C9D6E0;border-radius:4px;padding:5px 7px;break-inside:avoid;
     }
     #print-report .pbox h3{
-      font-family:'Space Grotesk',sans-serif;font-size:10px;text-transform:uppercase;
-      letter-spacing:.05em;color:#01619E;margin:0 0 6px;border-bottom:1px solid #E4EEF5;padding-bottom:4px;
+      font-family:'Space Grotesk',sans-serif;font-size:8.5px;text-transform:uppercase;
+      letter-spacing:.04em;color:#01619E;margin:0 0 3px;border-bottom:1px solid #E4EEF5;padding-bottom:2px;
     }
-    #print-report .pbox table{width:100%;border-collapse:collapse;font-size:10.5px;}
-    #print-report .pbox table td{padding:2px 0;border-bottom:1px dotted #ddd;}
+    #print-report .pbox table{width:100%;border-collapse:collapse;font-size:8.5px;}
+    #print-report .pbox table td{padding:1px 0;border-bottom:1px dotted #ddd;}
     #print-report .pbox table td:first-child{color:#555;}
-    #print-report .pbox table td:last-child{text-align:right;font-weight:600;white-space:nowrap;padding-left:6px;}
+    #print-report .pbox table td:last-child{text-align:right;font-weight:600;white-space:nowrap;padding-left:5px;}
 
-    #print-report .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    #print-report .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
     #print-report h2{
-      font-family:'Space Grotesk',sans-serif;font-size:12px;text-transform:uppercase;
-      letter-spacing:.05em;color:#01619E;margin:0 0 6px;
+      font-family:'Space Grotesk',sans-serif;font-size:9.5px;text-transform:uppercase;
+      letter-spacing:.04em;color:#01619E;margin:0 0 3px;
     }
-    #print-report .ledger{border:1px solid #C9D6E0;padding:8px 10px;border-radius:6px;break-inside:avoid;}
-    #print-report .ledger .line{font-size:10.5px;padding:3px 0;}
-    #print-report .ledger .final .fval{font-size:15px;}
-    #print-report .ledger .final-row{gap:6px;}
-    #print-report .ledger .fpct{font-size:10.5px;}
-    #print-report .flag,#print-report .trip-box{border:1px solid #999;background:none !important;color:#111 !important;padding:6px 8px;font-size:10.5px;}
+    #print-report .ledger{border:1px solid #C9D6E0;padding:5px 7px;border-radius:4px;break-inside:avoid;}
+    #print-report .ledger .line{font-size:8.5px;padding:1.5px 0;}
+    #print-report .ledger .divider{margin:3px 0;}
+    #print-report .ledger .final{margin-top:4px;padding-top:4px;}
+    #print-report .ledger .final .flbl{font-size:9px;}
+    #print-report .ledger .final .fval{font-size:12px;}
+    #print-report .ledger .final-row{gap:5px;}
+    #print-report .ledger .fpct{font-size:8.5px;}
+    #print-report .flag,#print-report .trip-box{border:1px solid #999;background:none !important;color:#111 !important;padding:3px 6px;font-size:8.5px;margin-top:4px;gap:4px;}
+    #print-report .trip-box .icon{font-size:11px;}
+    #print-report .trip-box .txt{font-size:8.5px;}
   }
 </style>
 </head>
@@ -265,7 +270,6 @@
       <div class="field full">
         <label>Name</label>
         <input type="text" id="in-name" placeholder="e.g. Rohit Sharma">
-        <p class="hint">Used to personalise the downloaded PDF plan sheet.</p>
       </div>
       <div class="field">
         <label>Designation</label>
@@ -821,7 +825,11 @@ function downloadPdfReport(){
     </div>
   `;
   document.getElementById("print-report").innerHTML = reportHtml;
+
+  const originalTitle = document.title;
+  document.title = "August Plan";
   window.print();
+  setTimeout(() => { document.title = originalTitle; }, 1000);
 }
 
 function inr(n){
