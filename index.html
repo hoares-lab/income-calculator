@@ -204,27 +204,47 @@
 
   #print-report{display:none;}
   @media print{
+    @page{size:A4;margin:9mm;}
     body{background:#fff !important;}
     .wrap{display:none !important;}
     #print-report{
       display:block !important;color:#111;font-family:'Inter',system-ui,sans-serif;
       max-width:100%;padding:0;
     }
-    #print-report h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 2px;}
-    #print-report .print-logo{height:28px;margin-bottom:8px;}
-    #print-report .print-meta{font-size:12px;color:#444;margin:0 0 18px;}
-    #print-report h2{
-      font-family:'Space Grotesk',sans-serif;font-size:14px;text-transform:uppercase;
-      letter-spacing:.06em;border-bottom:1px solid #999;padding-bottom:4px;margin:22px 0 10px;
+    #print-report .print-head{
+      display:flex;align-items:center;justify-content:space-between;
+      border-bottom:2px solid #01619E;padding-bottom:8px;margin-bottom:10px;
     }
-    #print-report table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;}
-    #print-report table td{padding:4px 6px;border-bottom:1px dotted #ccc;}
-    #print-report table td:first-child{color:#555;width:55%;}
-    #print-report table td:last-child{text-align:right;font-weight:600;}
-    #print-report .ledger{border:1px solid #ccc;padding:10px 12px;border-radius:0;}
-    #print-report .line{font-size:12px;padding:4px 0;}
-    #print-report .final .fval{font-size:18px;}
-    #print-report .flag,#print-report .trip-box{border:1px solid #999;background:none !important;color:#111 !important;}
+    #print-report .print-logo{height:26px;}
+    #print-report h1{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0;color:#01619E;}
+    #print-report .print-meta{font-size:10.5px;color:#555;margin:0;text-align:right;}
+
+    #print-report .box-grid{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;
+    }
+    #print-report .pbox{
+      border:1px solid #C9D6E0;border-radius:6px;padding:8px 10px;break-inside:avoid;
+    }
+    #print-report .pbox h3{
+      font-family:'Space Grotesk',sans-serif;font-size:10px;text-transform:uppercase;
+      letter-spacing:.05em;color:#01619E;margin:0 0 6px;border-bottom:1px solid #E4EEF5;padding-bottom:4px;
+    }
+    #print-report .pbox table{width:100%;border-collapse:collapse;font-size:10.5px;}
+    #print-report .pbox table td{padding:2px 0;border-bottom:1px dotted #ddd;}
+    #print-report .pbox table td:first-child{color:#555;}
+    #print-report .pbox table td:last-child{text-align:right;font-weight:600;white-space:nowrap;padding-left:6px;}
+
+    #print-report .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    #print-report h2{
+      font-family:'Space Grotesk',sans-serif;font-size:12px;text-transform:uppercase;
+      letter-spacing:.05em;color:#01619E;margin:0 0 6px;
+    }
+    #print-report .ledger{border:1px solid #C9D6E0;padding:8px 10px;border-radius:6px;break-inside:avoid;}
+    #print-report .ledger .line{font-size:10.5px;padding:3px 0;}
+    #print-report .ledger .final .fval{font-size:15px;}
+    #print-report .ledger .final-row{gap:6px;}
+    #print-report .ledger .fpct{font-size:10.5px;}
+    #print-report .flag,#print-report .trip-box{border:1px solid #999;background:none !important;color:#111 !important;padding:6px 8px;font-size:10.5px;}
   }
 </style>
 </head>
@@ -242,6 +262,11 @@
   <p class="section-label">Business context</p>
   <div class="card">
     <div class="grid">
+      <div class="field full">
+        <label>Name</label>
+        <input type="text" id="in-name" placeholder="e.g. Rohit Sharma">
+        <p class="hint">Used to personalise the downloaded PDF plan sheet.</p>
+      </div>
       <div class="field">
         <label>Designation</label>
         <select id="in-desig"></select>
@@ -708,41 +733,58 @@ function selectText(id){
   const el = document.getElementById(id);
   return el ? el.options[el.selectedIndex].text : "—";
 }
+function boxTable(rows){
+  return "<table>" + rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("") + "</table>";
+}
 
-function buildInputsTable(){
-  const rows = [];
-  rows.push(["Designation", selectText("in-desig")]);
-  rows.push(["Channel", selectText("in-channel")]);
-  rows.push(["WCP by 8th", inputVal("in-wcp8")]);
-  rows.push(["WCP by 10th", inputVal("in-wcp10")]);
-  rows.push(["WCP by 14th", inputVal("in-wcp14")]);
-  rows.push(["WCP by 20th", inputVal("in-wcp20")]);
-  rows.push(["Full month WCP", inputVal("in-wcpfull")]);
-  rows.push(["Trad business achieved", inputVal("in-trad")]);
-  rows.push(["NOP achieved (full month)", inputVal("in-nop")]);
-  rows.push(["Last month's WCP achievement %", inputVal("in-lastach")]);
-  rows.push(["13M book type", selectText("in-book-type")]);
+function buildInputBoxes(){
+  const boxes = [];
 
+  boxes.push({title:"Business Context", rows:[
+    ["Designation", selectText("in-desig")],
+    ["Channel", selectText("in-channel")]
+  ]});
+
+  boxes.push({title:"Milestone WCP", rows:[
+    ["WCP by 8th", inputVal("in-wcp8")],
+    ["WCP by 10th", inputVal("in-wcp10")],
+    ["WCP by 14th", inputVal("in-wcp14")],
+    ["WCP by 20th", inputVal("in-wcp20")],
+    ["Full month WCP", inputVal("in-wcpfull")]
+  ]});
+
+  boxes.push({title:"Business Inputs", rows:[
+    ["Trad business achieved", inputVal("in-trad")],
+    ["NOP achieved (full month)", inputVal("in-nop")],
+    ["Last month's WCP achievement %", inputVal("in-lastach")]
+  ]});
+
+  const qmRows = [["13M book type", selectText("in-book-type")]];
   const bookType = document.getElementById("in-book-type").value;
   if (bookType === "own"){
-    rows.push(["13M persistency %", inputVal("in-13m")]);
-    rows.push(["M0 %", inputVal("in-m0")]);
+    qmRows.push(["13M persistency %", inputVal("in-13m")]);
+    qmRows.push(["M0 %", inputVal("in-m0")]);
     if (parseNum(document.getElementById("in-13m").value) < 80){
-      rows.push(["13M EOM-to-EOM improvement %", inputVal("in-improvement")]);
+      qmRows.push(["13M improvement %", inputVal("in-improvement")]);
     }
-    rows.push(["25M %", inputVal("in-25m")]);
+    qmRows.push(["25M %", inputVal("in-25m")]);
   } else {
     const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
-    rows.push(["Book status", allocStatus === "allocated" ? "Book allocated" : "Book not allocated"]);
+    qmRows.push(["Book status", allocStatus === "allocated" ? "Allocated" : "Not allocated"]);
     if (allocStatus === "allocated"){
-      rows.push(["NOP collected", inputVal("in-nop-collected")]);
+      qmRows.push(["NOP collected", inputVal("in-nop-collected")]);
     }
   }
+  boxes.push({title:"Quality Modifier", rows:qmRows});
 
-  rows.push(["Goa / ₹35,000 choice", selectText("in-goa-choice")]);
-  rows.push(["Almaty / ₹70,000 choice", selectText("in-almaty-choice")]);
+  boxes.push({title:"Reward Choices", rows:[
+    ["Goa / ₹35,000", selectText("in-goa-choice")],
+    ["Almaty / ₹70,000", selectText("in-almaty-choice")]
+  ]});
 
-  return "<table>" + rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("") + "</table>";
+  return `<div class="box-grid">${boxes.map(b => `
+    <div class="pbox"><h3>${b.title}</h3>${boxTable(b.rows)}</div>
+  `).join("")}</div>`;
 }
 
 function downloadPdfReport(){
@@ -754,21 +796,29 @@ function downloadPdfReport(){
   const logoEl = document.querySelector(".brand-logo");
   const logoHtml = logoEl ? `<img class="print-logo" src="${logoEl.src}" alt="Bharti AXA">` : "";
   const today = new Date().toLocaleDateString("en-IN", {day:"numeric", month:"long", year:"numeric"});
-  const desig = document.getElementById("in-desig").value;
+  const nameRaw = document.getElementById("in-name").value.trim();
+  const firstName = nameRaw ? nameRaw.split(" ")[0] : "Your";
+  const possessive = firstName.endsWith("s") ? firstName + "'" : firstName + "'s";
 
   const reportHtml = `
-    ${logoHtml}
-    <h1>Income Calculator — Monthly Plan Sheet</h1>
-    <p class="print-meta">Designation: ${desig} · Month: August'26 · Generated on ${today}</p>
+    <div class="print-head">
+      ${logoHtml}
+      <h1>${possessive} August Plan</h1>
+      <p class="print-meta">${nameRaw || "—"} · ${document.getElementById("in-desig").value}<br>Generated on ${today}</p>
+    </div>
 
-    <h2>Your Plan — Inputs</h2>
-    ${buildInputsTable()}
+    ${buildInputBoxes()}
 
-    <h2>Incentive — Calculated</h2>
-    <div class="ledger">${document.getElementById("pi-ledger").innerHTML}</div>
-
-    <h2>RNR — Calculated</h2>
-    <div class="ledger">${document.getElementById("rnr-ledger").innerHTML}</div>
+    <div class="results-grid">
+      <div>
+        <h2>Incentive — Calculated</h2>
+        <div class="ledger">${document.getElementById("pi-ledger").innerHTML}</div>
+      </div>
+      <div>
+        <h2>RNR — Calculated</h2>
+        <div class="ledger">${document.getElementById("rnr-ledger").innerHTML}</div>
+      </div>
+    </div>
   `;
   document.getElementById("print-report").innerHTML = reportHtml;
   window.print();
