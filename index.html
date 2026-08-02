@@ -125,6 +125,13 @@
     box-shadow:0 4px 14px rgba(1,97,158,.25);
   }
   button.calc:active{transform:scale(.98);}
+  button.calc:disabled{
+    background:#C9D6E0 !important;color:#8098AC !important;border-bottom-color:#C9D6E0 !important;
+    box-shadow:none !important;cursor:not-allowed;
+  }
+  button.pdf-btn:disabled{
+    background:#FFFFFF !important;color:#B7C3CE !important;border-color:#D3E3EE !important;
+  }
 
   /* Tabs for results */
   .tabs{display:flex;gap:6px;margin:26px 0 16px;background:var(--navy-900);padding:4px;border-radius:12px;border:1px solid var(--line);}
@@ -188,6 +195,37 @@
     padding:3px 8px;border-radius:6px;margin-top:10px;
   }
   .note{font-size:12px;color:var(--ink-dim);margin-top:10px;line-height:1.5;}
+
+  .pdf-btn{
+    margin-top:14px;background:#FFFFFF;color:var(--brand-blue);
+    border:1.5px solid var(--brand-blue);border-bottom:1.5px solid var(--brand-blue);
+    box-shadow:none;
+  }
+
+  #print-report{display:none;}
+  @media print{
+    body{background:#fff !important;}
+    .wrap{display:none !important;}
+    #print-report{
+      display:block !important;color:#111;font-family:'Inter',system-ui,sans-serif;
+      max-width:100%;padding:0;
+    }
+    #print-report h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 2px;}
+    #print-report .print-logo{height:28px;margin-bottom:8px;}
+    #print-report .print-meta{font-size:12px;color:#444;margin:0 0 18px;}
+    #print-report h2{
+      font-family:'Space Grotesk',sans-serif;font-size:14px;text-transform:uppercase;
+      letter-spacing:.06em;border-bottom:1px solid #999;padding-bottom:4px;margin:22px 0 10px;
+    }
+    #print-report table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;}
+    #print-report table td{padding:4px 6px;border-bottom:1px dotted #ccc;}
+    #print-report table td:first-child{color:#555;width:55%;}
+    #print-report table td:last-child{text-align:right;font-weight:600;}
+    #print-report .ledger{border:1px solid #ccc;padding:10px 12px;border-radius:0;}
+    #print-report .line{font-size:12px;padding:4px 0;}
+    #print-report .final .fval{font-size:18px;}
+    #print-report .flag,#print-report .trip-box{border:1px solid #999;background:none !important;color:#111 !important;}
+  }
 </style>
 </head>
 <body>
@@ -366,7 +404,7 @@
     <div class="tab" data-tab="rnr">RNR</div>
   </div>
 
-  <button class="calc" id="calc-btn" onclick="calcActive()">Calculate Incentive</button>
+  <button class="calc" id="calc-btn" onclick="calcActive()" disabled>Calculate Incentive</button>
 
   <div class="result-panel active" id="result-pi">
     <div class="ledger" id="pi-ledger"><p class="placeholder">Fill in the inputs above and hit Calculate Incentive.</p></div>
@@ -376,7 +414,12 @@
     <div class="ledger" id="rnr-ledger"><p class="placeholder">Fill in the inputs above and hit Calculate RNR.</p></div>
   </div>
 
+  <button class="calc pdf-btn" id="pdf-btn" onclick="downloadPdfReport()" disabled>⬇ Download PDF Report</button>
+  <p class="hint" style="text-align:center;margin-top:8px;">Generates a printable monthly plan sheet with your inputs and both calculations. In the print dialog, choose "Save as PDF".</p>
+
 </div>
+
+<div id="print-report"></div>
 
 <script>
 /* ---------- shared data ---------- */
@@ -580,8 +623,68 @@ function validateTrad(){
 document.getElementById("in-trad").addEventListener("input", validateTrad);
 document.getElementById("in-wcpfull").addEventListener("input", validateTrad);
 
+/* ---------- form completeness & button enable/disable ---------- */
+const requiredTextFieldIds = [
+  "in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull",
+  "in-trad","in-nop","in-lastach"
+];
+
+function isFormComplete(){
+  for (const id of requiredTextFieldIds){
+    if (document.getElementById(id).value.trim() === "") return false;
+  }
+  const bookType = document.getElementById("in-book-type").value;
+  if (bookType === "own"){
+    if (document.getElementById("in-13m").value.trim() === "") return false;
+    if (document.getElementById("in-m0").value.trim() === "") return false;
+    if (parseNum(document.getElementById("in-13m").value) < 80 &&
+        document.getElementById("in-improvement").value.trim() === "") return false;
+    if (document.getElementById("in-25m").value.trim() === "") return false;
+  } else {
+    const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+    if (allocStatus === "allocated" && document.getElementById("in-nop-collected").value.trim() === "") return false;
+  }
+  return true;
+}
+
+let piCalculated = false;
+let rnrCalculated = false;
+
+function updateButtonStates(){
+  const complete = isFormComplete();
+  document.getElementById("calc-btn").disabled = !complete;
+  document.getElementById("pdf-btn").disabled = !(piCalculated && rnrCalculated);
+}
+
+function markInputsChanged(){
+  piCalculated = false;
+  rnrCalculated = false;
+  updateButtonStates();
+}
+
+const allTrackedFieldIds = [
+  "in-desig","in-channel","in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull",
+  "in-trad","in-nop","in-lastach","in-book-type","in-13m","in-m0","in-improvement","in-25m",
+  "in-nop-collected","in-goa-choice","in-almaty-choice"
+];
+allTrackedFieldIds.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", markInputsChanged);
+  el.addEventListener("change", markInputsChanged);
+});
+document.querySelectorAll('input[name="alloc-status"]').forEach(r => {
+  r.addEventListener("change", markInputsChanged);
+});
+
+updateButtonStates();
+
 function calcActive(){
   const activeTab = document.querySelector(".tab.active").dataset.tab;
+  if (!isFormComplete()){
+    const targetLedger = document.getElementById(activeTab === "pi" ? "pi-ledger" : "rnr-ledger");
+    targetLedger.innerHTML = `<p class="placeholder" style="color:var(--red);">Please fill in all fields before calculating.</p>`;
+    return;
+  }
   const milestonesOk = validateMilestones();
   const tradOk = validateTrad();
   if (!milestonesOk || !tradOk){
@@ -592,8 +695,83 @@ function calcActive(){
     targetLedger.innerHTML = `<p class="placeholder" style="color:var(--red);">${msg}</p>`;
     return;
   }
-  if (activeTab === "pi") calcProductionIncentive();
-  else calcRNR();
+  if (activeTab === "pi"){ calcProductionIncentive(); piCalculated = true; }
+  else { calcRNR(); rnrCalculated = true; }
+  updateButtonStates();
+}
+
+function inputVal(id){
+  const el = document.getElementById(id);
+  return el && el.value !== "" ? el.value : "—";
+}
+function selectText(id){
+  const el = document.getElementById(id);
+  return el ? el.options[el.selectedIndex].text : "—";
+}
+
+function buildInputsTable(){
+  const rows = [];
+  rows.push(["Designation", selectText("in-desig")]);
+  rows.push(["Channel", selectText("in-channel")]);
+  rows.push(["WCP by 8th", inputVal("in-wcp8")]);
+  rows.push(["WCP by 10th", inputVal("in-wcp10")]);
+  rows.push(["WCP by 14th", inputVal("in-wcp14")]);
+  rows.push(["WCP by 20th", inputVal("in-wcp20")]);
+  rows.push(["Full month WCP", inputVal("in-wcpfull")]);
+  rows.push(["Trad business achieved", inputVal("in-trad")]);
+  rows.push(["NOP achieved (full month)", inputVal("in-nop")]);
+  rows.push(["Last month's WCP achievement %", inputVal("in-lastach")]);
+  rows.push(["13M book type", selectText("in-book-type")]);
+
+  const bookType = document.getElementById("in-book-type").value;
+  if (bookType === "own"){
+    rows.push(["13M persistency %", inputVal("in-13m")]);
+    rows.push(["M0 %", inputVal("in-m0")]);
+    if (parseNum(document.getElementById("in-13m").value) < 80){
+      rows.push(["13M EOM-to-EOM improvement %", inputVal("in-improvement")]);
+    }
+    rows.push(["25M %", inputVal("in-25m")]);
+  } else {
+    const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+    rows.push(["Book status", allocStatus === "allocated" ? "Book allocated" : "Book not allocated"]);
+    if (allocStatus === "allocated"){
+      rows.push(["NOP collected", inputVal("in-nop-collected")]);
+    }
+  }
+
+  rows.push(["Goa / ₹35,000 choice", selectText("in-goa-choice")]);
+  rows.push(["Almaty / ₹70,000 choice", selectText("in-almaty-choice")]);
+
+  return "<table>" + rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("") + "</table>";
+}
+
+function downloadPdfReport(){
+  if (!piCalculated || !rnrCalculated){
+    alert("Please calculate both Incentive and RNR first, then download the report.");
+    return;
+  }
+
+  const logoEl = document.querySelector(".brand-logo");
+  const logoHtml = logoEl ? `<img class="print-logo" src="${logoEl.src}" alt="Bharti AXA">` : "";
+  const today = new Date().toLocaleDateString("en-IN", {day:"numeric", month:"long", year:"numeric"});
+  const desig = document.getElementById("in-desig").value;
+
+  const reportHtml = `
+    ${logoHtml}
+    <h1>Income Calculator — Monthly Plan Sheet</h1>
+    <p class="print-meta">Designation: ${desig} · Month: August'26 · Generated on ${today}</p>
+
+    <h2>Your Plan — Inputs</h2>
+    ${buildInputsTable()}
+
+    <h2>Incentive — Calculated</h2>
+    <div class="ledger">${document.getElementById("pi-ledger").innerHTML}</div>
+
+    <h2>RNR — Calculated</h2>
+    <div class="ledger">${document.getElementById("rnr-ledger").innerHTML}</div>
+  `;
+  document.getElementById("print-report").innerHTML = reportHtml;
+  window.print();
 }
 
 function inr(n){
