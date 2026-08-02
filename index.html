@@ -241,6 +241,7 @@
     }
     #print-report .ledger{border:1px solid #C9D6E0;padding:5px 7px;border-radius:4px;break-inside:avoid;}
     #print-report .ledger .line{font-size:8.5px;padding:1.5px 0;}
+    #print-report .ledger .line.sub .lbl{font-size:8.5px;padding-left:8px;}
     #print-report .ledger .divider{margin:3px 0;}
     #print-report .ledger .final{margin-top:4px;padding-top:4px;}
     #print-report .ledger .final .flbl{font-size:9px;}
@@ -338,7 +339,7 @@
     <h2><span class="n">4</span> Last month achievement</h2>
     <div class="grid">
       <div class="field full">
-        <label>Last month's WCP achievement %</label>
+        <label>Last months WCP achvt%</label>
         <input type="text" inputmode="decimal" id="in-lastach" placeholder="e.g. 105">
         <p class="hint">Used only for the consistency booster. This month's WCP is taken from the Full month WCP field above.</p>
       </div>
@@ -760,7 +761,7 @@ function buildInputBoxes(){
   boxes.push({title:"Business Inputs", rows:[
     ["Trad business achieved", inputVal("in-trad")],
     ["NOP achieved (full month)", inputVal("in-nop")],
-    ["Last month's WCP achievement %", inputVal("in-lastach")]
+    ["Last months WCP achvt%", inputVal("in-lastach")]
   ]});
 
   const qmRows = [["13M book type", selectText("in-book-type")]];
@@ -828,8 +829,12 @@ function downloadPdfReport(){
 
   const originalTitle = document.title;
   document.title = "August Plan";
-  window.print();
-  setTimeout(() => { document.title = originalTitle; }, 1000);
+  window.onafterprint = () => { document.title = originalTitle; window.onafterprint = null; };
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.print();
+    });
+  });
 }
 
 function inr(n){
