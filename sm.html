@@ -1253,9 +1253,9 @@ function resolveSlabReward(slab, gate2Met, goaChoice, almatyChoice){
 function formatSlabResult(resolved){
   if (!resolved) return "—";
   if (resolved.trip){
-    return resolved.cash > 0 ? `${resolved.trip} trip + ${shortInr(resolved.cash)}` : `${resolved.trip} trip`;
+    return resolved.cash > 0 ? `${resolved.trip} trip + ${inr(resolved.cash)}` : `${resolved.trip} trip`;
   }
-  return shortInr(resolved.cash);
+  return inr(resolved.cash);
 }
 
 const monthly = [
@@ -1270,7 +1270,7 @@ const monthly = [
 
 function monthlyLabel(row){
   if (!row) return "—";
-  return row.tripAlways ? (row.tripAlways + " + " + shortInr(row.reward)) : shortInr(row.reward);
+  return row.tripAlways ? (row.tripAlways + " + " + inr(row.reward)) : inr(row.reward);
 }
 
 const fastTrack = [
@@ -1330,7 +1330,7 @@ function calcRNR(){
   const monthlyCash = gate2Met ? monthlyRawCash : monthlyRawCash * 0.5;
   const monthlyTrip = (monthlyRow && monthlyRow.tripAlways && gate2Met) ? monthlyRow.tripAlways : null;
   const monthlyDisplay = monthlyRow
-    ? (gate2Met ? monthlyLabel(monthlyRow) : `${shortInr(monthlyCash)} (50% — Gate 2 not met)`)
+    ? (gate2Met ? monthlyLabel(monthlyRow) : `${inr(monthlyCash)} (50% — Gate 2 not met)`)
     : "No slab met";
   const viaFastTrack = ftIdx >= 0 && ftIdx > stdIdx;
 
