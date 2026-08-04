@@ -946,37 +946,36 @@ function buildSubmissionPayload(){
   return payload;
 }
 
-function logSubmission(){
+async function logSubmission(){
   if (!SUBMISSION_LOG_URL || SUBMISSION_LOG_URL.indexOf("PASTE_YOUR") === 0){
     console.warn("Submission logging skipped — SUBMISSION_LOG_URL not configured yet.");
     return;
   }
   try {
     const payload = buildSubmissionPayload();
-    const blob = new Blob([JSON.stringify(payload)], {type: "text/plain;charset=utf-8"});
-    const sent = navigator.sendBeacon(SUBMISSION_LOG_URL, blob);
-    if (!sent){
-      // Fallback for browsers without sendBeacon support.
-      fetch(SUBMISSION_LOG_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {"Content-Type": "text/plain;charset=utf-8"},
-        body: JSON.stringify(payload)
-      });
-    }
+    // NOTE: sendBeacon does NOT work here — Apps Script /exec URLs respond
+    // with a redirect, and sendBeacon silently refuses to follow redirects.
+    // fetch() follows redirects fine; we just need to await it so it isn't
+    // cut off by window.print() blocking the page right after.
+    await fetch(SUBMISSION_LOG_URL, {
+      method: "POST",
+      mode: "no-cors", // Apps Script web apps don't return readable CORS responses; fire-and-forget.
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify(payload)
+    });
   } catch (err){
     // Logging must never block the PDF download.
     console.error("Submission logging failed:", err);
   }
 }
 
-function downloadPdfReport(){
+async function downloadPdfReport(){
   if (!piCalculated || !rnrCalculated){
     alert("Please calculate both Incentive and RNR first, then download the report.");
     return;
   }
 
-  logSubmission();
+  await logSubmission();
 
   const logoEl = document.querySelector(".brand-logo");
   const logoHtml = logoEl ? `<img class="print-logo" src="${logoEl.src}" alt="Bharti AXA">` : "";
