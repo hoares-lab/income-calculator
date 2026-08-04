@@ -1109,10 +1109,14 @@ function calcProductionIncentive(){
   const slab = findSlab(achPct);
 
   let booster = 0;
-  let boosterReason = "Not applicable";
-  if (slab.min >= 100 && achPct >= lastAch){
+  let boosterNote;
+  if (achPct < 100){
+    boosterNote = "(current achv% < 100%)";
+  } else if (achPct < lastAch){
+    boosterNote = "(current achv% < prev month achv%)";
+  } else {
     booster = boosterTable[slab.min] || 0;
-    boosterReason = booster > 0 ? "This month's achievement ≥ last month's" : "Applicable band but 0% at this slab";
+    boosterNote = "(current achv% >= prev month achv%)";
   }
 
   const baseAmountPct = slab.payout + booster;
@@ -1127,13 +1131,13 @@ function calcProductionIncentive(){
 
   const html = `
     <h3>Incentive — breakdown</h3>
-    <div class="line"><span class="lbl">Target WCP (${desig} · ${channel} · ${months[monthIdx]})</span><span class="val">${inr(target)}</span></div>
+    <div class="line"><span class="lbl">Target WCP<br>(${desig} · ${channel} · ${months[monthIdx]})</span><span class="val">${inr(target)}</span></div>
     <div class="line"><span class="lbl">WCP achieved</span><span class="val">${inr(wcp)}</span></div>
     <div class="line"><span class="lbl">WCP achievement %</span><span class="val">${pct(achPct)}</span></div>
     <div class="line pos"><span class="lbl">Slab payout %</span><span class="val">${slab.payout}%</span></div>
-    <div class="line sub"><span class="lbl">Consistency booster (${boosterReason})</span><span class="val">+${booster}%</span></div>
+    <div class="line sub"><span class="lbl">Consistency booster<br>${boosterNote}</span><span class="val">+${booster}%</span></div>
     <div class="divider"></div>
-    <div class="line pos"><span class="lbl">Production Incentive Base % (slab + booster)</span><span class="val">${baseAmountPct}%</span></div>
+    <div class="line pos"><span class="lbl">Production Incentive Base %<br>(slab + booster)</span><span class="val">${baseAmountPct}%</span></div>
     <div class="line"><span class="lbl">Production Incentive Base amount</span><span class="val">${inr(baseAmount)}</span></div>
     <div class="divider"></div>
     <div class="line sub"><span class="lbl">Trad % of WCP</span><span class="val">${pct(tradPct)}</span></div>
@@ -1268,22 +1272,22 @@ function calcRNR(){
   let html = `
     <h3>RNR — breakdown</h3>
 
-    <div class="line"><span class="lbl">FA group (from designation)</span><span class="val">${faLabel[grp]}</span></div>
+    <div class="line"><span class="lbl">FA group<br>(from designation)</span><span class="val">${faLabel[grp]}</span></div>
 
     <div class="divider"></div>
-    <div class="line"><span class="lbl">Full-month target WCP (${desig} · ${channel})</span><span class="val">${inr(target)}</span></div>
+    <div class="line"><span class="lbl">Full-month target WCP<br>(${desig} · ${channel})</span><span class="val">${inr(target)}</span></div>
     <div class="line"><span class="lbl">Full-month WCP achievement %</span><span class="val">${pct(achPct)}</span></div>
     <div class="line ${gate2Met ? 'pos' : ''}"><span class="lbl">Gate 2 — 100% target achievement</span><span class="val">${gate2Met ? "✓ Met — full payout" : "✗ Not met — 50% payout, cash only"}</span></div>
 
     <div class="divider"></div>
     <div class="line sub"><span class="lbl">Sizzler — reward by 8th</span><span class="val">${displayR8}</span></div>
     <div class="line sub"><span class="lbl">Sizzler — reward by 14th</span><span class="val">${displayR14}</span></div>
-    <div class="line pos"><span class="lbl">Sizzler payout (higher, ${sizzlerSource})</span><span class="val">${sizzlerResolved.trip ? sizzlerResolved.trip + " trip" : shortInr(sizzlerResolved.cash)}</span></div>
+    <div class="line pos"><span class="lbl">Sizzler payout<br>(higher, ${sizzlerSource})</span><span class="val">${sizzlerResolved.trip ? sizzlerResolved.trip + " trip" : shortInr(sizzlerResolved.cash)}</span></div>
 
     <div class="divider"></div>
-    <div class="line sub"><span class="lbl">Monthly slab met — standard (full month)</span><span class="val">${stdIdx>=0 ? monthlyLabel(monthly[stdIdx]) : "—"}</span></div>
-    <div class="line sub"><span class="lbl">Monthly slab met — fast-track (by 20th)</span><span class="val">${ftIdx>=0 ? monthlyLabel(monthly[ftIdx]) : "—"}</span></div>
-    <div class="line pos"><span class="lbl">Monthly Contest payout${viaFastTrack ? " (via fast-track)" : ""}</span><span class="val">${monthlyDisplay}</span></div>
+    <div class="line sub"><span class="lbl">Monthly slab met — standard<br>(full month)</span><span class="val">${stdIdx>=0 ? monthlyLabel(monthly[stdIdx]) : "—"}</span></div>
+    <div class="line sub"><span class="lbl">Monthly slab met — fast-track<br>(by 20th)</span><span class="val">${ftIdx>=0 ? monthlyLabel(monthly[ftIdx]) : "—"}</span></div>
+    <div class="line pos"><span class="lbl">Monthly Contest payout${viaFastTrack ? "<br>(via fast-track)" : ""}</span><span class="val">${monthlyDisplay}</span></div>
 
     <div class="divider"></div>
     ${zonalQualified ? `<div class="flag">✓ Qualifies for Zonal Meet (WCP by 10th ≥ ₹50,000 + monthly slab met)</div>` : `<div class="note">Zonal Meet not qualified — needs WCP by 10th ≥ ₹50,000 and any Monthly Contest slab met.</div>`}
