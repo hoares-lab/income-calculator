@@ -385,7 +385,7 @@
       <div class="field full">
         <label>FA team size</label>
         <input type="text" inputmode="decimal" id="in-teamsize" placeholder="e.g. 5">
-        <p class="hint" style="white-space:normal;overflow:visible;text-overflow:clip;">Do not include your self code in this count. Minimum team size is treated as 3, even if you enter lower.</p>
+        <p class="hint" style="white-space:normal;overflow:visible;text-overflow:clip;">Do not include your self code in this count. Min team size is 3.</p>
       </div>
       <div class="field">
         <label>FA active by 8th</label>
@@ -474,9 +474,25 @@
 
     <div class="grid" id="allocated-book-fields" style="display:none;">
       <div class="field full">
+        <label>Book status</label>
+        <div style="display:flex;gap:18px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink);font-weight:400;">
+            <input type="radio" name="alloc-status" value="allocated" id="alloc-status-yes" checked style="width:auto;">
+            Book allocated
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink);font-weight:400;">
+            <input type="radio" name="alloc-status" value="not-allocated" id="alloc-status-no" style="width:auto;">
+            Book not allocated
+          </label>
+        </div>
+      </div>
+      <div class="field full" id="movement-wrap">
         <label>13M persistency movement (BOM to EOM) %</label>
         <input type="text" inputmode="decimal" id="in-movement" placeholder="e.g. 4">
         <p class="hint" style="white-space:normal;overflow:visible;text-overflow:clip;">0–2.99% movement → 90% modifier · 3% and above → 110% modifier.</p>
+      </div>
+      <div class="field full" id="not-allocated-note" style="display:none;">
+        <p class="hint">No book allocated — flat 100% applied.</p>
       </div>
     </div>
   </div>
@@ -637,6 +653,14 @@ document.getElementById("in-book-type").addEventListener("change", ()=>{
   document.getElementById("allocated-book-fields").style.display = (type === "allocated") ? "grid" : "none";
 });
 
+document.querySelectorAll('input[name="alloc-status"]').forEach(r=>{
+  r.addEventListener("change", ()=>{
+    const status = document.querySelector('input[name="alloc-status"]:checked').value;
+    document.getElementById("movement-wrap").style.display = (status === "allocated") ? "block" : "none";
+    document.getElementById("not-allocated-note").style.display = (status === "not-allocated") ? "block" : "none";
+  });
+});
+
 /* result tabs */
 const tabLabels = { pi: "Calculate Incentive", rnr: "Calculate RNR" };
 document.querySelectorAll(".tab").forEach(t=>{
@@ -726,7 +750,8 @@ function isFormComplete(){
         document.getElementById("in-improvement").value.trim() === "") return false;
     if (document.getElementById("in-25m").value.trim() === "") return false;
   } else {
-    if (document.getElementById("in-movement").value.trim() === "") return false;
+    const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+    if (allocStatus === "allocated" && document.getElementById("in-movement").value.trim() === "") return false;
   }
   return true;
 }
@@ -808,6 +833,9 @@ allTrackedFieldIds.forEach(id => {
   el.addEventListener("input", markInputsChanged);
   el.addEventListener("change", markInputsChanged);
 });
+document.querySelectorAll('input[name="alloc-status"]').forEach(r => {
+  r.addEventListener("change", markInputsChanged);
+});
 
 updateButtonStates();
 
@@ -887,7 +915,11 @@ function buildInputBoxes(){
     }
     qmRows.push(["25M %", inputVal("in-25m")]);
   } else {
-    qmRows.push(["13M persistency movement %", inputVal("in-movement")]);
+    const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+    qmRows.push(["Book status", allocStatus === "allocated" ? "Allocated" : "Not allocated"]);
+    if (allocStatus === "allocated"){
+      qmRows.push(["13M persistency movement %", inputVal("in-movement")]);
+    }
   }
   boxes.push({title:"Quality Modifier", rows:qmRows});
 
@@ -935,7 +967,11 @@ function buildSubmissionPayload(){
     payload["13M improvement %"] = document.getElementById("in-improvement").value;
     payload["25M %"] = document.getElementById("in-25m").value;
   } else {
-    payload["13M persistency movement %"] = document.getElementById("in-movement").value;
+    const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+    payload["Book status"] = allocStatus;
+    if (allocStatus === "allocated"){
+      payload["13M persistency movement %"] = document.getElementById("in-movement").value;
+    }
   }
   payload["Goa choice"] = selectText("in-goa-choice");
   payload["Almaty choice"] = selectText("in-almaty-choice");
@@ -1080,6 +1116,10 @@ function getQualityResult(){
     const improvement = parseNum(document.getElementById("in-improvement").value);
     return qualityModifierOwn(m13, m0, m25, improvement);
   }
+  const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+  if (allocStatus === "not-allocated"){
+    return {modifier:100, band:"Book not allocated — default 100%"};
+  }
   const movement = parseNum(document.getElementById("in-movement").value);
   return qualityModifierAllocated(movement);
 }
@@ -1109,19 +1149,21 @@ function calcProductionIncentive(){
 
   // Self-code gate: 80% slab needs ₹1.5L+ self-code business this month.
   const selfCodeGateMet = selfCode >= 150000;
-  let selfCodeGateNote = "Not applicable at this slab";
+  let selfCodeGateFailed = false;
   if (slab.min === 80 && !selfCodeGateMet){
     slab = {min:0, payout:0};
-    selfCodeGateNote = "80% slab needs ₹1.5L+ self-code business — not met, so 0% payout applies";
-  } else if (slab.min === 80){
-    selfCodeGateNote = "80% slab unlocked — ₹1.5L+ self-code business met";
+    selfCodeGateFailed = true;
   }
 
   let booster = 0;
-  let boosterReason = "Not applicable";
-  if (slab.min >= 100 && achPct >= lastAch){
+  let boosterNote;
+  if (achPct < 100){
+    boosterNote = "(current achv% < 100%)";
+  } else if (achPct < lastAch){
+    boosterNote = "(current achv% < prev month achv%)";
+  } else {
     booster = boosterTable[slab.min] || 0;
-    boosterReason = booster > 0 ? "This month's achievement ≥ last month's" : "Applicable band but 0% at this slab";
+    boosterNote = "(current achv% >= prev month achv%)";
   }
 
   const baseAmountPct = slab.payout + booster;
@@ -1147,17 +1189,17 @@ function calcProductionIncentive(){
 
   const html = `
     <h3>Incentive — breakdown</h3>
-    <div class="line"><span class="lbl">Target WCP (${desig} · ${channel} · ${months[monthIdx]})</span><span class="val">${inr(target)}</span></div>
+    <div class="line"><span class="lbl">Target WCP<br>(${desig} · ${channel} · ${months[monthIdx]})</span><span class="val">${inr(target)}</span></div>
     <div class="line"><span class="lbl">WCP achieved</span><span class="val">${inr(wcp)}</span></div>
     <div class="line"><span class="lbl">WCP achievement %</span><span class="val">${pct(achPct)}</span></div>
-    <div class="line sub"><span class="lbl">Self-code gate (80% slab)</span><span class="val">${selfCodeGateNote}</span></div>
+    ${selfCodeGateFailed ? `<div class="line sub"><span class="lbl">Self-code gate<br>(80% slab)</span><span class="val">80% slab needs ₹1.5L+ self-code business — not met, so 0% payout applies</span></div>` : ""}
     <div class="line pos"><span class="lbl">Slab payout %</span><span class="val">${slab.payout}%</span></div>
-    <div class="line sub"><span class="lbl">Consistency booster (${boosterReason})</span><span class="val">+${booster}%</span></div>
+    <div class="line sub"><span class="lbl">Consistency booster<br>${boosterNote}</span><span class="val">+${booster}%</span></div>
     <div class="divider"></div>
-    <div class="line pos"><span class="lbl">Production Incentive Base % (slab + booster)</span><span class="val">${baseAmountPct}%</span></div>
+    <div class="line pos"><span class="lbl">Production Incentive Base %<br>(slab + booster)</span><span class="val">${baseAmountPct}%</span></div>
     <div class="line"><span class="lbl">Production Incentive Base amount</span><span class="val">${inr(baseAmount)}</span></div>
     <div class="divider"></div>
-    <div class="line sub"><span class="lbl">FA active % (of team+self code, ${faActiveFull}/${goldDenominator})</span><span class="val">${pct(goldActivePct)}</span></div>
+    <div class="line sub"><span class="lbl">FA active %<br>(Team = FA team + 1 self code, ${faActiveFull}/${goldDenominator})</span><span class="val">${pct(goldActivePct)}</span></div>
     <div class="line"><span class="lbl">Gold Standard Booster</span><span class="val">×${goldMult.toFixed(2)}</span></div>
     <div class="line"><span class="lbl">Amount after Gold Standard</span><span class="val">${inr(step2)}</span></div>
     <div class="divider"></div>
@@ -1169,7 +1211,7 @@ function calcProductionIncentive(){
     <div class="line"><span class="lbl">Total quality modifier</span><span class="val">${q.modifier}%</span></div>
     <div class="line"><span class="lbl">Amount after Quality Modifier</span><span class="val">${inr(step4)}</span></div>
     <div class="divider"></div>
-    <div class="line sub"><span class="lbl">FA incentive earners % (of team, ${faEarners}/${teamSize})</span><span class="val">${pct(earnerPct)}</span></div>
+    <div class="line sub"><span class="lbl">FA incentive earners %<br>(of team, ${faEarners}/${teamSize})</span><span class="val">${pct(earnerPct)}</span></div>
     <div class="line"><span class="lbl">Earner Spread Booster</span><span class="val">×${earnerMult.toFixed(2)}</span></div>
     <div class="final">
       <span class="flbl">Final Incentive</span>
@@ -1187,7 +1229,7 @@ function calcProductionIncentive(){
 const sizzlerRows = [
   {faActive:3, wcp:400000,  r8:{value:20000, trip:null},    r14:{value:10000, trip:null}},
   {faActive:3, wcp:600000,  r8:{value:35000, trip:null},    r14:{value:17500, trip:null}},
-  {faActive:4, wcp:1000000, r8:{value:35000, trip:"Goa"},   r14:{value:25000, trip:null}},
+  {faActive:4, wcp:1000000, r8:{value:40000, trip:"Goa", tripCash:5000},   r14:{value:25000, trip:null}},
   {faActive:4, wcp:1500000, r8:{value:70000, trip:"Almaty"},r14:{value:35000, trip:"Goa"}}
 ];
 
@@ -1204,9 +1246,16 @@ function findSizzlerSlab(faActiveVal, wcpVal, side){
 function resolveSlabReward(slab, gate2Met, goaChoice, almatyChoice){
   if (!slab) return {cash:0, trip:null};
   if (!gate2Met) return {cash: slab.value * 0.5, trip:null};
-  if (slab.trip === "Goa") return goaChoice === "trip" ? {cash:0, trip:"Goa"} : {cash:slab.value, trip:null};
-  if (slab.trip === "Almaty") return almatyChoice === "trip" ? {cash:0, trip:"Almaty"} : {cash:slab.value, trip:null};
+  if (slab.trip === "Goa") return goaChoice === "trip" ? {cash: slab.tripCash || 0, trip:"Goa"} : {cash:slab.value, trip:null};
+  if (slab.trip === "Almaty") return almatyChoice === "trip" ? {cash: slab.tripCash || 0, trip:"Almaty"} : {cash:slab.value, trip:null};
   return {cash:slab.value, trip:null};
+}
+function formatSlabResult(resolved){
+  if (!resolved) return "—";
+  if (resolved.trip){
+    return resolved.cash > 0 ? `${resolved.trip} trip + ${shortInr(resolved.cash)}` : `${resolved.trip} trip`;
+  }
+  return shortInr(resolved.cash);
 }
 
 const monthly = [
@@ -1263,8 +1312,8 @@ function calcRNR(){
   const sizzlerResolved = resolveSlabReward(chosenSlab, gate2Met, goaChoice, almatyChoice);
   const r8Resolved = resolveSlabReward(r8Slab, gate2Met, goaChoice, almatyChoice);
   const r14Resolved = resolveSlabReward(r14Slab, gate2Met, goaChoice, almatyChoice);
-  const displayR8 = r8Resolved.trip ? r8Resolved.trip + " trip" : shortInr(r8Resolved.cash);
-  const displayR14 = r14Resolved.trip ? r14Resolved.trip + " trip" : shortInr(r14Resolved.cash);
+  const displayR8 = formatSlabResult(r8Resolved);
+  const displayR14 = formatSlabResult(r14Resolved);
 
   // Monthly contest — standard (full month) + fast-track (by 20th)
   let stdIdx = -1;
@@ -1295,19 +1344,19 @@ function calcRNR(){
     <h3>RNR — breakdown</h3>
 
     <div class="divider"></div>
-    <div class="line"><span class="lbl">Full-month target WCP (${desig} · ${channel})</span><span class="val">${inr(target)}</span></div>
+    <div class="line"><span class="lbl">Full-month target WCP<br>(${desig} · ${channel})</span><span class="val">${inr(target)}</span></div>
     <div class="line"><span class="lbl">Full-month WCP achievement %</span><span class="val">${pct(achPct)}</span></div>
     <div class="line ${gate2Met ? 'pos' : ''}"><span class="lbl">Gate 2 — 100% target achievement</span><span class="val">${gate2Met ? "✓ Met — full payout" : "✗ Not met — 50% payout, cash only"}</span></div>
 
     <div class="divider"></div>
-    <div class="line sub"><span class="lbl">Sizzler — reward by 8th (${faActive8} FA active, ₹${wcp8.toLocaleString("en-IN")} WCP)</span><span class="val">${displayR8}</span></div>
-    <div class="line sub"><span class="lbl">Sizzler — reward by 14th (${faActive14} FA active, ₹${wcp14.toLocaleString("en-IN")} WCP)</span><span class="val">${displayR14}</span></div>
-    <div class="line pos"><span class="lbl">Sizzler payout (higher, ${sizzlerSource})</span><span class="val">${sizzlerResolved.trip ? sizzlerResolved.trip + " trip" : shortInr(sizzlerResolved.cash)}</span></div>
+    <div class="line sub"><span class="lbl">Sizzler — reward by 8th<br>(${faActive8} FA active, ₹${wcp8.toLocaleString("en-IN")} WCP)</span><span class="val">${displayR8}</span></div>
+    <div class="line sub"><span class="lbl">Sizzler — reward by 14th<br>(${faActive14} FA active, ₹${wcp14.toLocaleString("en-IN")} WCP)</span><span class="val">${displayR14}</span></div>
+    <div class="line pos"><span class="lbl">Sizzler payout<br>(higher, ${sizzlerSource})</span><span class="val">${formatSlabResult(sizzlerResolved)}</span></div>
 
     <div class="divider"></div>
-    <div class="line sub"><span class="lbl">Monthly slab met — standard (full month)</span><span class="val">${stdIdx>=0 ? monthlyLabel(monthly[stdIdx]) : "—"}</span></div>
-    <div class="line sub"><span class="lbl">Monthly slab met — fast-track (by 20th)</span><span class="val">${ftIdx>=0 ? monthlyLabel(monthly[ftIdx]) : "—"}</span></div>
-    <div class="line pos"><span class="lbl">Monthly Contest payout${viaFastTrack ? " (via fast-track)" : ""}</span><span class="val">${monthlyDisplay}</span></div>
+    <div class="line sub"><span class="lbl">Monthly slab met — standard<br>(full month)</span><span class="val">${stdIdx>=0 ? monthlyLabel(monthly[stdIdx]) : "—"}</span></div>
+    <div class="line sub"><span class="lbl">Monthly slab met — fast-track<br>(by 20th)</span><span class="val">${ftIdx>=0 ? monthlyLabel(monthly[ftIdx]) : "—"}</span></div>
+    <div class="line pos"><span class="lbl">Monthly Contest payout${viaFastTrack ? "<br>(via fast-track)" : ""}</span><span class="val">${monthlyDisplay}</span></div>
 
     <div class="divider"></div>
     ${zonalQualified ? `<div class="flag">✓ Qualifies for Zonal Meet (2 FA active by 10th + 3 FA active full month + monthly slab met)</div>` : `<div class="note">Zonal Meet not qualified — needs 2 FA active by 10th, 3 FA active by full month, and any Monthly Contest slab met.</div>`}
