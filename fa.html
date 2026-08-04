@@ -1158,6 +1158,11 @@ const monthly = [
   {nop:3, fa1:3000000, fa2:4000000, fa3:5000000, reward:350000, label:"Japan + ₹3.5L", tripAlways:"Japan"}
 ];
 
+function monthlyLabel(row){
+  if (!row) return "—";
+  return row.tripAlways ? (row.tripAlways + " + " + inr(row.reward)) : inr(row.reward);
+}
+
 // Fast-track discounted thresholds by 20th — map to monthly[3..7]
 const fastTrack = [
   {idx:3, fa1:450000,  fa2:500000,  fa3:600000},
@@ -1235,7 +1240,7 @@ function calcRNR(){
   const monthlyCash = gate2Met ? monthlyRawCash : monthlyRawCash * 0.5;
   const monthlyTrip = (monthlyRow && monthlyRow.tripAlways && gate2Met) ? monthlyRow.tripAlways : null;
   const monthlyLabel = monthlyRow
-    ? (gate2Met ? monthlyRow.label : `${inr(monthlyCash)} (50% — Gate 2 not met)`)
+    ? (gate2Met ? monthlyLabel(monthlyRow) : `${inr(monthlyCash)} (50% — Gate 2 not met)`)
     : "No slab met";
   const viaFastTrack = ftIdx >= 0 && ftIdx > stdIdx;
 
@@ -1261,8 +1266,8 @@ function calcRNR(){
     <div class="line pos"><span class="lbl">Sizzler payout (higher, ${sizzlerSource})</span><span class="val">${sizzlerResolved.trip ? sizzlerResolved.trip + " trip" : inr(sizzlerResolved.cash)}</span></div>
 
     <div class="divider"></div>
-    <div class="line sub"><span class="lbl">Monthly slab met — standard (full month)</span><span class="val">${stdIdx>=0 ? monthly[stdIdx].label : "—"}</span></div>
-    <div class="line sub"><span class="lbl">Monthly slab met — fast-track (by 20th)</span><span class="val">${ftIdx>=0 ? monthly[ftIdx].label : "—"}</span></div>
+    <div class="line sub"><span class="lbl">Monthly slab met — standard (full month)</span><span class="val">${stdIdx>=0 ? monthlyLabel(monthly[stdIdx]) : "—"}</span></div>
+    <div class="line sub"><span class="lbl">Monthly slab met — fast-track (by 20th)</span><span class="val">${ftIdx>=0 ? monthlyLabel(monthly[ftIdx]) : "—"}</span></div>
     <div class="line pos"><span class="lbl">Monthly Contest payout${viaFastTrack ? " (via fast-track)" : ""}</span><span class="val">${monthlyLabel}</span></div>
 
     <div class="divider"></div>
