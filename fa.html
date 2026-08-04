@@ -1179,7 +1179,7 @@ const monthly = [
 
 function monthlyLabel(row){
   if (!row) return "—";
-  return row.tripAlways ? (row.tripAlways + " + " + shortInr(row.reward)) : shortInr(row.reward);
+  return row.tripAlways ? (row.tripAlways + " + " + inr(row.reward)) : inr(row.reward);
 }
 
 // Fast-track discounted thresholds by 20th — map to monthly[3..7]
@@ -1234,8 +1234,8 @@ function calcRNR(){
   const sizzlerResolved = resolveSizzlerReward(rawSizzlerValue, goaChoice, almatyChoice, gate2Met);
   const r8Resolved = resolveSizzlerReward(r8, goaChoice, almatyChoice, gate2Met);
   const r14Resolved = resolveSizzlerReward(r14, goaChoice, almatyChoice, gate2Met);
-  const displayR8 = r8Resolved.trip ? r8Resolved.trip + " trip" : shortInr(r8Resolved.cash);
-  const displayR14 = r14Resolved.trip ? r14Resolved.trip + " trip" : shortInr(r14Resolved.cash);
+  const displayR8 = r8Resolved.trip ? r8Resolved.trip + " trip" : inr(r8Resolved.cash);
+  const displayR14 = r14Resolved.trip ? r14Resolved.trip + " trip" : inr(r14Resolved.cash);
 
   // Monthly contest — standard, on full month WCP
   let stdIdx = -1;
@@ -1259,7 +1259,7 @@ function calcRNR(){
   const monthlyCash = gate2Met ? monthlyRawCash : monthlyRawCash * 0.5;
   const monthlyTrip = (monthlyRow && monthlyRow.tripAlways && gate2Met) ? monthlyRow.tripAlways : null;
   const monthlyDisplay = monthlyRow
-    ? (gate2Met ? monthlyLabel(monthlyRow) : `${shortInr(monthlyCash)} (50% — Gate 2 not met)`)
+    ? (gate2Met ? monthlyLabel(monthlyRow) : `${inr(monthlyCash)} (50% — Gate 2 not met)`)
     : "No slab met";
   const viaFastTrack = ftIdx >= 0 && ftIdx > stdIdx;
 
@@ -1282,7 +1282,7 @@ function calcRNR(){
     <div class="divider"></div>
     <div class="line sub"><span class="lbl">Sizzler — reward by 8th</span><span class="val">${displayR8}</span></div>
     <div class="line sub"><span class="lbl">Sizzler — reward by 14th</span><span class="val">${displayR14}</span></div>
-    <div class="line pos"><span class="lbl">Sizzler payout<br>(higher, ${sizzlerSource})</span><span class="val">${sizzlerResolved.trip ? sizzlerResolved.trip + " trip" : shortInr(sizzlerResolved.cash)}</span></div>
+    <div class="line pos"><span class="lbl">Sizzler payout<br>(higher, ${sizzlerSource})</span><span class="val">${sizzlerResolved.trip ? sizzlerResolved.trip + " trip" : inr(sizzlerResolved.cash)}</span></div>
 
     <div class="divider"></div>
     <div class="line sub"><span class="lbl">Monthly slab met — standard<br>(full month)</span><span class="val">${stdIdx>=0 ? monthlyLabel(monthly[stdIdx]) : "—"}</span></div>
