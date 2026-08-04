@@ -122,7 +122,7 @@
   select:focus,input:focus{border-color:var(--brand-blue);box-shadow:0 0 0 3px rgba(1,97,158,.12);}
   input::placeholder{color:#93A8BA;}
 
-  .hint{font-size:11px;color:#5d6d85;margin-top:5px;line-height:1.4;}
+  .hint{font-size:11px;color:#5d6d85;margin-top:5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .error-msg{font-size:11px;color:var(--red);margin-top:5px;line-height:1.4;display:none;}
   input.field-error{border-color:var(--red);box-shadow:0 0 0 3px rgba(236,53,84,.12);}
 
@@ -337,7 +337,7 @@
       <label>Trad business achieved (₹)</label>
       <input type="text" inputmode="decimal" id="in-trad" placeholder="e.g. 60000">
       <p class="error-msg" id="err-trad"></p>
-      <p class="hint">Trad Booster only applies once overall WCP achievement is 100% or more.</p>
+      <p class="hint">Applies only when WCP achievement is ≥100%.</p>
     </div>
   </div>
 
@@ -355,7 +355,7 @@
       <div class="field full">
         <label>Last months WCP achvt%</label>
         <input type="text" inputmode="decimal" id="in-lastach" placeholder="e.g. 105">
-        <p class="hint">Used only for the consistency booster. This month's WCP is taken from the Full month WCP field above.</p>
+        <p class="hint">Used only for the consistency booster.</p>
       </div>
     </div>
   </div>
@@ -369,7 +369,7 @@
           <option value="own">Own 13M book</option>
           <option value="allocated">Allocated book</option>
         </select>
-        <p class="hint">Choose "Allocated book" if the FA doesn't have their own 13M persistency book and has instead been allocated one to collect renewals against.</p>
+        <p class="hint">Pick "Allocated" if no own 13M book.</p>
       </div>
     </div>
 
@@ -386,13 +386,13 @@
         <div class="conditional">
           <label>13M EOM-to-EOM improvement %</label>
           <input type="text" inputmode="decimal" id="in-improvement" placeholder="e.g. 6">
-          <p class="hint">Only used because 13M is below 80%. ≥5% improvement gives a flat 100% modifier; below that, modifier is 0%.</p>
+          <p class="hint">13M&lt;80%: ≥5% gives 100%, else 0%.</p>
         </div>
       </div>
       <div class="field full">
         <label>25M %</label>
         <input type="text" inputmode="decimal" id="in-25m" placeholder="e.g. 70">
-        <p class="hint">Booster only added if above 65% — and never when 13M is below 80%.</p>
+        <p class="hint">Added only if 25M &gt;65% and 13M ≥80%.</p>
       </div>
     </div>
 
@@ -416,7 +416,7 @@
         <p class="hint">0–1 → 80% modifier · 2–3 → 110% · 4 &amp; above → 120%.</p>
       </div>
       <div class="field full" id="not-allocated-note" style="display:none;">
-        <p class="hint">No book has been allocated yet — a flat 100% quality modifier will be applied.</p>
+        <p class="hint">No book allocated — flat 100% applied.</p>
       </div>
     </div>
   </div>
@@ -430,7 +430,7 @@
           <option value="cash">₹35,000 cash</option>
           <option value="trip">Goa trip</option>
         </select>
-        <p class="hint">Applies if you land the Goa-tier Sizzler reward.</p>
+        <p class="hint">For Goa-tier reward.</p>
       </div>
       <div class="field">
         <label>Almaty / ₹70,000</label>
@@ -438,7 +438,7 @@
           <option value="cash">₹70,000 cash</option>
           <option value="trip">Almaty trip</option>
         </select>
-        <p class="hint">Applies if you land the Almaty-tier Sizzler reward.</p>
+        <p class="hint">For Almaty-tier reward.</p>
       </div>
     </div>
   </div>
@@ -459,7 +459,7 @@
   </div>
 
   <button class="calc pdf-btn" id="pdf-btn" onclick="downloadPdfReport()" disabled>⬇ Download PDF Report</button>
-  <p class="hint" style="text-align:center;margin-top:8px;">Generates a printable monthly plan sheet with your inputs and both calculations. In the print dialog, choose "Save as PDF".</p>
+  <p class="hint" style="text-align:center;margin-top:8px;">Creates a printable plan sheet. Choose "Save as PDF".</p>
 
 </div>
 
@@ -575,7 +575,7 @@ percentFieldIds.forEach(id => {
 document.getElementById("in-desig").addEventListener("change", updateFaHint);
 function updateFaHint(){
   const d = document.getElementById("in-desig").value;
-  document.getElementById("fagroup-hint").textContent = "Falls under " + faLabel[faGroup(d)] + " for RNR monthly-slab thresholds.";
+  document.getElementById("fagroup-hint").textContent = faLabel[faGroup(d)] + " for RNR slabs.";
 }
 updateFaHint();
 
@@ -999,7 +999,12 @@ const fastTrack = [
   {idx:7, fa1:2000000, fa2:2600000, fa3:3250000}
 ];
 
-function resolveSizzlerReward(value, goaChoice, almatyChoice){
+function resolveSizzlerReward(value, goaChoice, almatyChoice, gate2Met){
+  if (value <= 0) return {cash:0, trip:null};
+  if (!gate2Met){
+    // Gate 2 not met: forced to cash at 50% of slab value, trip options unavailable
+    return {cash: value * 0.5, trip:null};
+  }
   if (value === 35000){
     return goaChoice === "trip" ? {cash:0, trip:"Goa"} : {cash:35000, trip:null};
   }
@@ -1011,6 +1016,8 @@ function resolveSizzlerReward(value, goaChoice, almatyChoice){
 
 function calcRNR(){
   const desig = document.getElementById("in-desig").value;
+  const channel = document.getElementById("in-channel").value;
+  const monthIdx = FIXED_MONTH_IDX;
   const grp = faGroup(desig);
   const wcp8 = parseNum(document.getElementById("in-wcp8").value);
   const wcp10 = parseNum(document.getElementById("in-wcp10").value);
@@ -1021,15 +1028,20 @@ function calcRNR(){
   const goaChoice = document.getElementById("in-goa-choice").value;
   const almatyChoice = document.getElementById("in-almaty-choice").value;
 
+  // Gate 2: 100% target achievement in the month, else RNR payout is 50%
+  const target = targets[channel][desig][monthIdx];
+  const achPct = target > 0 ? (wcpFull/target*100) : 0;
+  const gate2Met = achPct >= 100;
+
   // Sizzler
   let r8 = 0, r14 = 0;
   for (const s of sizzler){ if (wcp8 >= s.threshold) r8 = s.r8; }
   for (const s of sizzler){ if (wcp14 >= s.threshold) r14 = s.r14; }
   const rawSizzlerValue = Math.max(r8, r14);
   const sizzlerSource = r8 >= r14 ? "by 8th" : "by 14th";
-  const sizzlerResolved = resolveSizzlerReward(rawSizzlerValue, goaChoice, almatyChoice);
-  const r8Resolved = resolveSizzlerReward(r8, goaChoice, almatyChoice);
-  const r14Resolved = resolveSizzlerReward(r14, goaChoice, almatyChoice);
+  const sizzlerResolved = resolveSizzlerReward(rawSizzlerValue, goaChoice, almatyChoice, gate2Met);
+  const r8Resolved = resolveSizzlerReward(r8, goaChoice, almatyChoice, gate2Met);
+  const r14Resolved = resolveSizzlerReward(r14, goaChoice, almatyChoice, gate2Met);
   const displayR8 = r8Resolved.trip ? r8Resolved.trip + " trip" : inr(r8Resolved.cash);
   const displayR14 = r14Resolved.trip ? r14Resolved.trip + " trip" : inr(r14Resolved.cash);
 
@@ -1051,9 +1063,12 @@ function calcRNR(){
 
   const finalIdx = Math.max(stdIdx, ftIdx);
   const monthlyRow = finalIdx >= 0 ? monthly[finalIdx] : null;
-  const monthlyCash = monthlyRow ? monthlyRow.reward : 0;
-  const monthlyLabel = monthlyRow ? monthlyRow.label : "No slab met";
-  const monthlyTrip = monthlyRow && monthlyRow.tripAlways ? monthlyRow.tripAlways : null;
+  const monthlyRawCash = monthlyRow ? monthlyRow.reward : 0;
+  const monthlyCash = gate2Met ? monthlyRawCash : monthlyRawCash * 0.5;
+  const monthlyTrip = (monthlyRow && monthlyRow.tripAlways && gate2Met) ? monthlyRow.tripAlways : null;
+  const monthlyLabel = monthlyRow
+    ? (gate2Met ? monthlyRow.label : `${inr(monthlyCash)} (50% — Gate 2 not met)`)
+    : "No slab met";
   const viaFastTrack = ftIdx >= 0 && ftIdx > stdIdx;
 
   // Zonal meet
@@ -1066,6 +1081,11 @@ function calcRNR(){
     <h3>RNR — breakdown</h3>
 
     <div class="line"><span class="lbl">FA group (from designation)</span><span class="val">${faLabel[grp]}</span></div>
+
+    <div class="divider"></div>
+    <div class="line"><span class="lbl">Full-month target WCP (${desig} · ${channel})</span><span class="val">${inr(target)}</span></div>
+    <div class="line"><span class="lbl">Full-month WCP achievement %</span><span class="val">${pct(achPct)}</span></div>
+    <div class="line ${gate2Met ? 'pos' : ''}"><span class="lbl">Gate 2 — 100% target achievement</span><span class="val">${gate2Met ? "✓ Met — full payout" : "✗ Not met — 50% payout, cash only"}</span></div>
 
     <div class="divider"></div>
     <div class="line sub"><span class="lbl">Sizzler — reward by 8th</span><span class="val">${displayR8}</span></div>
