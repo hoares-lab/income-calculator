@@ -124,7 +124,7 @@
 
   .hint{font-size:11px;color:#5d6d85;margin-top:5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .error-msg{font-size:11px;color:var(--red);margin-top:5px;line-height:1.4;display:none;}
-  input.field-error{border-color:var(--red);box-shadow:0 0 0 3px rgba(236,53,84,.12);}
+  input.field-error,select.field-error{border-color:var(--red);box-shadow:0 0 0 3px rgba(236,53,84,.12);}
 
   .conditional{
     border-left:2px solid var(--brand-blue);padding-left:12px;margin-top:4px;
@@ -285,6 +285,50 @@
       <div class="field full">
         <label>Name</label>
         <input type="text" id="in-name" placeholder="e.g. Rohit Sharma">
+        <p class="error-msg" id="err-name"></p>
+      </div>
+      <div class="field full">
+        <label>State</label>
+        <select id="in-state">
+          <option value="" disabled selected>Select State</option>
+          <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+          <option value="Andhra Pradesh">Andhra Pradesh</option>
+          <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+          <option value="Assam">Assam</option>
+          <option value="Bihar">Bihar</option>
+          <option value="Chandigarh">Chandigarh</option>
+          <option value="Chhattisgarh">Chhattisgarh</option>
+          <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+          <option value="Delhi">Delhi</option>
+          <option value="Goa">Goa</option>
+          <option value="Gujarat">Gujarat</option>
+          <option value="Haryana">Haryana</option>
+          <option value="Himachal Pradesh">Himachal Pradesh</option>
+          <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+          <option value="Jharkhand">Jharkhand</option>
+          <option value="Karnataka">Karnataka</option>
+          <option value="Kerala">Kerala</option>
+          <option value="Ladakh">Ladakh</option>
+          <option value="Lakshadweep">Lakshadweep</option>
+          <option value="Madhya Pradesh">Madhya Pradesh</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Manipur">Manipur</option>
+          <option value="Meghalaya">Meghalaya</option>
+          <option value="Mizoram">Mizoram</option>
+          <option value="Nagaland">Nagaland</option>
+          <option value="Odisha">Odisha</option>
+          <option value="Puducherry">Puducherry</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Rajasthan">Rajasthan</option>
+          <option value="Sikkim">Sikkim</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="Telangana">Telangana</option>
+          <option value="Tripura">Tripura</option>
+          <option value="Uttar Pradesh">Uttar Pradesh</option>
+          <option value="Uttarakhand">Uttarakhand</option>
+          <option value="West Bengal">West Bengal</option>
+        </select>
+        <p class="error-msg" id="err-state"></p>
       </div>
       <div class="field">
         <label>Designation</label>
@@ -674,6 +718,8 @@ const requiredTextFieldIds = [
 ];
 
 function isFormComplete(){
+  if (document.getElementById("in-name").value.trim() === "") return false;
+  if (document.getElementById("in-state").value.trim() === "") return false;
   for (const id of requiredTextFieldIds){
     if (document.getElementById(id).value.trim() === "") return false;
   }
@@ -700,14 +746,69 @@ function updateButtonStates(){
   document.getElementById("pdf-btn").disabled = !(piCalculated && rnrCalculated);
 }
 
+// Fields that, if filled, imply the user has started working through the
+// form — used to prompt for Name/State since they're the first fields.
+const otherInputIds = [
+  "in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull",
+  "in-trad","in-nop","in-lastach",
+  "in-13m","in-m0","in-improvement","in-25m","in-nop-collected"
+];
+
+// Designation/Channel always have a value pre-selected (no blank option),
+// so we can't detect "filled" the same way — track user interaction instead.
+let desigOrChannelTouched = false;
+document.getElementById("in-desig").addEventListener("change", () => { desigOrChannelTouched = true; });
+document.getElementById("in-channel").addEventListener("change", () => { desigOrChannelTouched = true; });
+
+function validateNameState(){
+  const nameEl = document.getElementById("in-name");
+  const stateEl = document.getElementById("in-state");
+  const nameErrEl = document.getElementById("err-name");
+  const stateErrEl = document.getElementById("err-state");
+
+  const hasOtherInput = desigOrChannelTouched ||
+    otherInputIds.some(id => document.getElementById(id).value.trim() !== "");
+
+  let valid = true;
+
+  if (hasOtherInput && nameEl.value.trim() === ""){
+    nameEl.classList.add("field-error");
+    nameErrEl.textContent = "Please enter your name.";
+    nameErrEl.style.display = "block";
+    valid = false;
+  } else {
+    nameEl.classList.remove("field-error");
+    nameErrEl.style.display = "none";
+  }
+
+  if (hasOtherInput && stateEl.value === ""){
+    stateEl.classList.add("field-error");
+    stateErrEl.textContent = "Please enter your state.";
+    stateErrEl.style.display = "block";
+    valid = false;
+  } else {
+    stateEl.classList.remove("field-error");
+    stateErrEl.style.display = "none";
+  }
+
+  return valid;
+}
+
+function resetLedgers(){
+  document.getElementById("pi-ledger").innerHTML = `<p class="placeholder">Fill in the inputs above and hit Calculate Incentive.</p>`;
+  document.getElementById("rnr-ledger").innerHTML = `<p class="placeholder">Fill in the inputs above and hit Calculate RNR.</p>`;
+}
+
 function markInputsChanged(){
   piCalculated = false;
   rnrCalculated = false;
+  resetLedgers();
+  validateNameState();
   updateButtonStates();
 }
 
 const allTrackedFieldIds = [
-  "in-desig","in-channel","in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull",
+  "in-name","in-state","in-desig","in-channel","in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull",
   "in-trad","in-nop","in-lastach","in-book-type","in-13m","in-m0","in-improvement","in-25m",
   "in-nop-collected","in-goa-choice","in-almaty-choice"
 ];
@@ -760,6 +861,7 @@ function buildInputBoxes(){
   const boxes = [];
 
   boxes.push({title:"Business Context", rows:[
+    ["State", selectText("in-state")],
     ["Designation", selectText("in-desig")],
     ["Channel", selectText("in-channel")]
   ]});
@@ -806,11 +908,70 @@ function buildInputBoxes(){
   `).join("")}</div>`;
 }
 
+/* ---------- Submission logging (Google Sheet via Apps Script) ---------- */
+// TODO: replace with your deployed Apps Script Web App URL (see setup guide).
+const SUBMISSION_LOG_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+function buildSubmissionPayload(){
+  const bookType = document.getElementById("in-book-type").value;
+  const payload = {
+    "Name": document.getElementById("in-name").value.trim(),
+    "State": selectText("in-state"),
+    "Designation": selectText("in-desig"),
+    "Channel": selectText("in-channel"),
+    "WCP by 8th": document.getElementById("in-wcp8").value,
+    "WCP by 10th": document.getElementById("in-wcp10").value,
+    "WCP by 14th": document.getElementById("in-wcp14").value,
+    "WCP by 20th": document.getElementById("in-wcp20").value,
+    "Full month WCP": document.getElementById("in-wcpfull").value,
+    "Trad business achieved": document.getElementById("in-trad").value,
+    "NOP achieved": document.getElementById("in-nop").value,
+    "Last month WCP achvt %": document.getElementById("in-lastach").value,
+    "13M book type": selectText("in-book-type")
+  };
+  if (bookType === "own"){
+    payload["13M persistency %"] = document.getElementById("in-13m").value;
+    payload["M0 %"] = document.getElementById("in-m0").value;
+    payload["13M improvement %"] = document.getElementById("in-improvement").value;
+    payload["25M %"] = document.getElementById("in-25m").value;
+  } else {
+    const allocStatus = document.querySelector('input[name="alloc-status"]:checked').value;
+    payload["Book status"] = allocStatus;
+    if (allocStatus === "allocated"){
+      payload["NOP collected"] = document.getElementById("in-nop-collected").value;
+    }
+  }
+  payload["Goa choice"] = selectText("in-goa-choice");
+  payload["Almaty choice"] = selectText("in-almaty-choice");
+  return payload;
+}
+
+function logSubmission(){
+  if (!SUBMISSION_LOG_URL || SUBMISSION_LOG_URL.indexOf("PASTE_YOUR") === 0){
+    console.warn("Submission logging skipped — SUBMISSION_LOG_URL not configured yet.");
+    return;
+  }
+  try {
+    const payload = buildSubmissionPayload();
+    fetch(SUBMISSION_LOG_URL, {
+      method: "POST",
+      mode: "no-cors", // Apps Script web apps don't return readable CORS responses; fire-and-forget.
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify(payload)
+    });
+  } catch (err){
+    // Logging must never block the PDF download.
+    console.error("Submission logging failed:", err);
+  }
+}
+
 function downloadPdfReport(){
   if (!piCalculated || !rnrCalculated){
     alert("Please calculate both Incentive and RNR first, then download the report.");
     return;
   }
+
+  logSubmission();
 
   const logoEl = document.querySelector(".brand-logo");
   const logoHtml = logoEl ? `<img class="print-logo" src="${logoEl.src}" alt="Bharti AXA">` : "";
@@ -823,7 +984,7 @@ function downloadPdfReport(){
     <div class="print-head">
       ${logoHtml}
       <h1>${possessive} August Plan</h1>
-      <p class="print-meta">${nameRaw || "—"} · ${document.getElementById("in-desig").value}<br>Generated on ${today}</p>
+      <p class="print-meta">${nameRaw || "—"} · ${document.getElementById("in-desig").value} · ${selectText("in-state")}<br>Generated on ${today}</p>
     </div>
 
     ${buildInputBoxes()}
