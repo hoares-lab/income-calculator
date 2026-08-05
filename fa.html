@@ -222,15 +222,16 @@
     body{background:#fff !important;}
     .wrap{display:none !important;}
     #print-report{
-      display:block !important;color:#111;font-family:'Inter',system-ui,sans-serif;
+      display:block !important;color:#111;font-family:-apple-system,system-ui,'Helvetica Neue',Arial,sans-serif;
       max-width:100%;padding:0;line-height:1.25;
     }
+    #print-report, #print-report *{font-family:inherit !important;}
     #print-report .print-head{
       display:flex;align-items:center;justify-content:space-between;
       border-bottom:1.5px solid #01619E;padding-bottom:5px;margin-bottom:6px;
     }
     #print-report .print-logo{height:20px;}
-    #print-report h1{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0;color:#01619E;}
+    #print-report h1{font-family:inherit;font-weight:700;font-size:15px;margin:0;color:#01619E;}
     #print-report .print-meta{font-size:9px;color:#555;margin:0;text-align:right;}
 
     #print-report .box-grid{
@@ -240,7 +241,7 @@
       border:1px solid #C9D6E0;border-radius:4px;padding:5px 7px;break-inside:avoid;
     }
     #print-report .pbox h3{
-      font-family:'Space Grotesk',sans-serif;font-size:8.5px;text-transform:uppercase;
+      font-family:inherit;font-weight:700;font-size:8.5px;text-transform:uppercase;
       letter-spacing:.04em;color:#01619E;margin:0 0 3px;border-bottom:1px solid #E4EEF5;padding-bottom:2px;
     }
     #print-report .pbox table{width:100%;border-collapse:collapse;font-size:8.5px;}
@@ -250,7 +251,7 @@
 
     #print-report .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
     #print-report h2{
-      font-family:'Space Grotesk',sans-serif;font-size:9.5px;text-transform:uppercase;
+      font-family:inherit;font-weight:700;font-size:9.5px;text-transform:uppercase;
       letter-spacing:.04em;color:#01619E;margin:0 0 3px;
     }
     #print-report .ledger{border:1px solid #C9D6E0;padding:5px 7px;border-radius:4px;break-inside:avoid;}
