@@ -592,8 +592,16 @@ const SM_PASSWORD = "DD_SM@1234"; // <<< EDIT SM PASSWORD HERE
 /* ============================================================ */
 
 (function initGate(){
-  if (sessionStorage.getItem("smUnlocked") === "true"){
+  const cameFromLanding = new URLSearchParams(window.location.search).get("auth") === "1";
+  const alreadyUnlockedThisTab = sessionStorage.getItem("smUnlocked") === "true";
+
+  if (cameFromLanding || alreadyUnlockedThisTab){
+    sessionStorage.setItem("smUnlocked", "true");
     document.getElementById("gate-overlay").classList.add("unlocked");
+    // Strip ?auth=1 from the visible URL so it doesn't linger if bookmarked/shared.
+    if (cameFromLanding && window.history && window.history.replaceState){
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+    }
   } else {
     document.getElementById("gate-input").focus();
   }
