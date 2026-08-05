@@ -189,8 +189,7 @@
   function submitGate(){
     const entered = document.getElementById("pw-input").value;
     if (activeRole && entered === ROLE_PASSWORDS[activeRole]){
-      sessionStorage.setItem(activeRole + "Unlocked", "true");
-      window.location.href = ROLE_TARGET[activeRole];
+      window.location.href = ROLE_TARGET[activeRole] + "?auth=1";
     } else {
       document.getElementById("pw-error").style.display = "block";
     }
