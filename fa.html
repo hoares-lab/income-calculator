@@ -220,6 +220,7 @@
     @page{size:A4;margin:6mm;}
     body{background:#fff !important;}
     .wrap{display:none !important;}
+    .loading-overlay{display:none !important;}
     #print-report{
       display:block !important;color:#111;font-family:-apple-system,system-ui,'Helvetica Neue',Arial,sans-serif;
       max-width:100%;padding:0;line-height:1.25;
@@ -1097,8 +1098,10 @@ function downloadPdfReport(){
     hideLoading();
   };
   // Safety net: if onafterprint never fires (varies by browser/device),
-  // don't leave the page frozen indefinitely.
-  setTimeout(hideLoading, 5000);
+  // don't leave the page frozen indefinitely. Kept long since the native
+  // print/save dialog itself can take a while to appear on some devices —
+  // hiding this too early just exposes an awkward gap before that dialog shows up.
+  setTimeout(hideLoading, 20000);
   window.print();
 }
 
