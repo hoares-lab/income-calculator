@@ -288,6 +288,11 @@
         <p class="error-msg" id="err-name"></p>
       </div>
       <div class="field full">
+        <label>E-code</label>
+        <input type="text" inputmode="numeric" id="in-ecode" placeholder="e.g. 12345" maxlength="5">
+        <p class="error-msg" id="err-ecode"></p>
+      </div>
+      <div class="field full">
         <label>State</label>
         <select id="in-state">
           <option value="" disabled selected>Select State</option>
@@ -641,6 +646,14 @@ plainNumberFieldIds.forEach(id => {
   el.addEventListener("input", () => liveFormatPlain(el));
 });
 
+document.getElementById("in-ecode").addEventListener("input", (e) => {
+  const el = e.target;
+  const cursorPos = el.selectionStart;
+  const digitsBefore = el.value.slice(0, cursorPos).replace(/[^0-9]/g, "").length;
+  el.value = el.value.replace(/[^0-9]/g, "").slice(0, 5);
+  el.setSelectionRange(digitsBefore, digitsBefore);
+});
+
 document.getElementById("in-13m").addEventListener("input", ()=>{
   const v = parseNum(document.getElementById("in-13m").value);
   document.getElementById("improvement-wrap").style.display = (v < 80) ? "block" : "none";
@@ -738,6 +751,7 @@ const requiredTextFieldIds = [
 
 function isFormComplete(){
   if (document.getElementById("in-name").value.trim() === "") return false;
+  if (!/^\d{5}$/.test(document.getElementById("in-ecode").value.trim())) return false;
   if (document.getElementById("in-state").value.trim() === "") return false;
   for (const id of requiredTextFieldIds){
     if (document.getElementById(id).value.trim() === "") return false;
@@ -777,8 +791,10 @@ document.getElementById("in-channel").addEventListener("change", () => { desigOr
 
 function validateNameState(){
   const nameEl = document.getElementById("in-name");
+  const ecodeEl = document.getElementById("in-ecode");
   const stateEl = document.getElementById("in-state");
   const nameErrEl = document.getElementById("err-name");
+  const ecodeErrEl = document.getElementById("err-ecode");
   const stateErrEl = document.getElementById("err-state");
 
   const hasOtherInput = desigOrChannelTouched ||
@@ -794,6 +810,22 @@ function validateNameState(){
   } else {
     nameEl.classList.remove("field-error");
     nameErrEl.style.display = "none";
+  }
+
+  const ecodeVal = ecodeEl.value.trim();
+  if (hasOtherInput && ecodeVal === ""){
+    ecodeEl.classList.add("field-error");
+    ecodeErrEl.textContent = "Please enter your E-code.";
+    ecodeErrEl.style.display = "block";
+    valid = false;
+  } else if (ecodeVal !== "" && !/^\d{5}$/.test(ecodeVal)){
+    ecodeEl.classList.add("field-error");
+    ecodeErrEl.textContent = "E-code must be exactly 5 digits.";
+    ecodeErrEl.style.display = "block";
+    valid = false;
+  } else {
+    ecodeEl.classList.remove("field-error");
+    ecodeErrEl.style.display = "none";
   }
 
   if (hasOtherInput && stateEl.value === ""){
@@ -823,7 +855,7 @@ function markInputsChanged(){
 }
 
 const allTrackedFieldIds = [
-  "in-name","in-state","in-desig","in-channel","in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull","in-selfcode",
+  "in-name","in-ecode","in-state","in-desig","in-channel","in-wcp8","in-wcp10","in-wcp14","in-wcp20","in-wcpfull","in-selfcode",
   "in-teamsize","in-faactive8","in-faactive10","in-faactive14","in-faactivefull","in-faearners",
   "in-trad","in-lastach","in-book-type","in-13m","in-m0","in-improvement","in-25m","in-movement",
   "in-goa-choice","in-almaty-choice"
@@ -877,6 +909,7 @@ function buildInputBoxes(){
   const boxes = [];
 
   boxes.push({title:"Business Context", rows:[
+    ["E-code", inputVal("in-ecode")],
     ["State", selectText("in-state")],
     ["Designation", selectText("in-desig")],
     ["Channel", selectText("in-channel")]
@@ -942,6 +975,7 @@ function buildSubmissionPayload(){
   const payload = {
     "Role": "SM",
     "Name": document.getElementById("in-name").value.trim(),
+    "E-code": document.getElementById("in-ecode").value.trim(),
     "State": selectText("in-state"),
     "Designation": selectText("in-desig"),
     "Channel": selectText("in-channel"),
@@ -996,13 +1030,17 @@ async function logSubmission(){
   }
 }
 
-async function downloadPdfReport(){
+function downloadPdfReport(){
   if (!piCalculated || !rnrCalculated){
     alert("Please calculate both Incentive and RNR first, then download the report.");
     return;
   }
 
-  await logSubmission();
+  // Fire-and-forget — do NOT await. Awaiting here would break the direct
+  // user-gesture chain that window.print() needs on iOS Safari, causing
+  // the print dialog to silently fail to appear. fetch() still initiates
+  // the network request synchronously, so logging is unaffected.
+  logSubmission();
 
   const logoEl = document.querySelector(".brand-logo");
   const logoHtml = logoEl ? `<img class="print-logo" src="${logoEl.src}" alt="Bharti AXA">` : "";
@@ -1015,7 +1053,7 @@ async function downloadPdfReport(){
     <div class="print-head">
       ${logoHtml}
       <h1>${possessive} August Plan</h1>
-      <p class="print-meta">${nameRaw || "—"} · ${document.getElementById("in-desig").value} · ${selectText("in-state")}<br>Generated on ${today}</p>
+      <p class="print-meta">${nameRaw || "—"} (${document.getElementById("in-ecode").value.trim() || "—"}) · ${document.getElementById("in-desig").value} · ${selectText("in-state")}<br>Generated on ${today}</p>
     </div>
 
     ${buildInputBoxes()}
@@ -1036,11 +1074,7 @@ async function downloadPdfReport(){
   const originalTitle = document.title;
   document.title = "August Plan";
   window.onafterprint = () => { document.title = originalTitle; window.onafterprint = null; };
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      window.print();
-    });
-  });
+  window.print();
 }
 
 function inr(n){
