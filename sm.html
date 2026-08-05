@@ -264,6 +264,7 @@
     #print-report .ledger .final-row{gap:5px;}
     #print-report .ledger .fpct{font-size:8.5px;}
     #print-report .flag,#print-report .trip-box{border:1px solid #999;background:none !important;color:#111 !important;padding:3px 6px;font-size:8.5px;margin-top:4px;gap:4px;}
+    #print-report .note{font-size:7px;line-height:1.35;margin-top:3px;color:#777;}
     #print-report .trip-box .icon{font-size:11px;}
     #print-report .trip-box .txt{font-size:8.5px;}
   }
@@ -1367,7 +1368,7 @@ function calcProductionIncentive(){
         <span class="fpct">(${pct(wcp>0?(finalAmount/wcp*100):0)} of WCP)</span>
       </div>
     </div>
-    <p class="note">This calculation does not check scheme gates (e.g. persistency or other eligibility conditions). The payout shown is subject to all applicable gates being met.</p>
+    <p class="note">Does not check scheme gates — actual payout is subject to gates being met.</p>
   `;
   document.getElementById("pi-ledger").innerHTML = html;
 }
@@ -1521,7 +1522,7 @@ function calcRNR(){
     html += `<div class="trip-box"><span class="icon">✈️</span><span class="txt">Plus: ${t} trip</span></div>`;
   });
 
-  html += `<p class="note">This calculation does not check scheme gates (e.g. persistency or other eligibility conditions). The payout shown is subject to all applicable gates being met.</p>`;
+  html += `<p class="note">Does not check scheme gates — actual payout is subject to gates being met.</p>`;
 
   document.getElementById("rnr-ledger").innerHTML = html;
 }
