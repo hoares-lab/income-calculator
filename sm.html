@@ -449,18 +449,22 @@
       <div class="field">
         <label>FA active by 8th</label>
         <input type="text" inputmode="decimal" id="in-faactive8" placeholder="0">
+        <p class="error-msg" id="err-faactive8"></p>
       </div>
       <div class="field">
         <label>FA active by 10th</label>
         <input type="text" inputmode="decimal" id="in-faactive10" placeholder="0">
+        <p class="error-msg" id="err-faactive10"></p>
       </div>
       <div class="field">
         <label>FA active by 14th</label>
         <input type="text" inputmode="decimal" id="in-faactive14" placeholder="0">
+        <p class="error-msg" id="err-faactive14"></p>
       </div>
       <div class="field">
         <label>FA active — full month</label>
         <input type="text" inputmode="decimal" id="in-faactivefull" placeholder="0">
+        <p class="error-msg" id="err-faactivefull"></p>
       </div>
       <div class="field full">
         <p class="hint" style="white-space:normal;overflow:visible;text-overflow:clip;">Include your self code in each of the FA active counts above, if it's active too.</p>
@@ -822,6 +826,42 @@ milestoneChain.forEach(m => {
   document.getElementById(m.id).addEventListener("input", validateMilestones);
 });
 
+/* ---------- FA active count validation (later date can't be lower) ---------- */
+const faActiveChain = [
+  {id:"in-faactive8",  label:"FA active by 8th"},
+  {id:"in-faactive10", label:"FA active by 10th"},
+  {id:"in-faactive14", label:"FA active by 14th"},
+  {id:"in-faactivefull", label:"FA active — full month"}
+];
+
+function validateFaActiveChain(){
+  let isValid = true;
+  let prevVal = 0;
+  let prevLabel = "";
+  faActiveChain.forEach((m, i) => {
+    const el = document.getElementById(m.id);
+    const val = parseNum(el.value);
+    const errEl = document.getElementById("err-" + m.id.replace("in-",""));
+    if (i > 0 && el.value !== "" && val < prevVal){
+      el.classList.add("field-error");
+      if (errEl){
+        errEl.textContent = `Can't be less than ${prevLabel} (${prevVal})`;
+        errEl.style.display = "block";
+      }
+      isValid = false;
+    } else {
+      el.classList.remove("field-error");
+      if (errEl) errEl.style.display = "none";
+    }
+    if (el.value !== ""){ prevVal = val; prevLabel = m.label; }
+  });
+  return isValid;
+}
+
+faActiveChain.forEach(m => {
+  document.getElementById(m.id).addEventListener("input", validateFaActiveChain);
+});
+
 /* ---------- Trad business validation ---------- */
 function validateTrad(){
   const tradEl = document.getElementById("in-trad");
@@ -978,12 +1018,18 @@ function calcActive(){
     return;
   }
   const milestonesOk = validateMilestones();
+  const faActiveOk = validateFaActiveChain();
   const tradOk = validateTrad();
-  if (!milestonesOk || !tradOk){
+  if (!milestonesOk || !faActiveOk || !tradOk){
     const targetLedger = document.getElementById(activeTab === "pi" ? "pi-ledger" : "rnr-ledger");
-    const msg = !milestonesOk
-      ? "Please fix the milestone WCP values above — a later date can't be lower than an earlier one — then calculate again."
-      : "Trad business can't be more than the Full month WCP — please fix it above, then calculate again.";
+    let msg;
+    if (!milestonesOk){
+      msg = "Please fix the milestone WCP values above — a later date can't be lower than an earlier one — then calculate again.";
+    } else if (!faActiveOk){
+      msg = "Please fix the FA active counts above — a later date can't be lower than an earlier one — then calculate again.";
+    } else {
+      msg = "Trad business can't be more than the Full month WCP — please fix it above, then calculate again.";
+    }
     targetLedger.innerHTML = `<p class="placeholder" style="color:var(--red);">${msg}</p>`;
     return;
   }
